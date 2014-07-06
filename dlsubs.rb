@@ -2,6 +2,7 @@ require 'open-uri'
 require 'nokogiri'
 require "uri"
 require "json"
+require 'fileutils'
 require "./prettyFormatMovieName"
 require "./common"
 
@@ -82,6 +83,8 @@ def subsfactory(url, searchPaths, tvSeries, outputPath, excludeExts)
         end
     end
 end
+
+FileUtils::mkdir_p outputPath if !File.exist?(outputPath)
 
 subsList.each do |s|
     send(s['titleParser'], s['feedUrl'], searchPaths, tvSeries, outputPath, excludeExts)
