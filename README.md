@@ -12,6 +12,11 @@ See [pretty-format-movie-filename](https://github.com/dafi/pretty-format-movie-f
 
 ## Prerequisites
 
+
+	# should be needed to install nokogiri
+	sudo apt-get install ruby-dev
+
+
 	gem install nokogiri
 	gem install rubyzip
 
