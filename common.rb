@@ -1,8 +1,14 @@
 require 'zip'
 require "./prettyFormatMovieName"
+require 'optparse'
+require 'ostruct'
 
 class Common
     def self.episode_exist?(path, newTitle, excludeExts)
+        # if path doesn't exist skip it otherwise all newTitles are considered 'new'
+        if !File.exist?(path)
+            return true
+        end
         # episode_exist is false by default so we handle the case
         # there isn't any episode for passed title
         episode_exist = false
@@ -58,4 +64,35 @@ class Common
         
         File.delete(zipPath) if deleteZip
     end
+
+    def self.parse_command_line(default_config_file_name)
+        cmd_opts = OpenStruct.new
+        cmd_opts.config_file = nil
+
+        OptionParser.new do |opts|
+            opts.banner = "Usage: #{File.basename($0)} [options]"
+
+            opts.on('-c', '--config-file file', 'Use the passed config file otherwise determine the path from script directory') do |config|
+                cmd_opts.config_file = config
+            end
+
+            opts.separator ''
+            opts.on_tail('-h', '--help', 'This help text') do
+                puts opts
+                exit
+            end
+        end.parse!
+
+        scriptDir = File.dirname File.expand_path $0
+        if cmd_opts.config_file.nil?
+            cmd_opts.config_file = File.join(scriptDir, default_config_file_name)
+        end
+        json_map = JSON.parse(open(cmd_opts.config_file).read)
+        options = OpenStruct.new(json_map)
+        # resolve path
+        options.outputPath = Common.getOutputPath(scriptDir, json_map)
+
+        return options
+    end
+
 end
