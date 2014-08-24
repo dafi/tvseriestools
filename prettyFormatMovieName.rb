@@ -23,7 +23,7 @@ class PrettyFormatMovieFilename
         file.match(/(^.*?)\.s?([0-9]{1,2})\.?[e|x]?([0-9]{2})(.*?)\.?.*(\..{3})/i) { |m|
             if m.length == 6
                 p = PrettyFormatMovieFilename.new
-                p.showName = m[1].gsub(/\.+$/, '')
+                p.showName = m[1].gsub(/[^a-z0-9]+$/, '')
                 p.season = m[2].to_i
                 p.episode = m[3].to_i
                 p.extraText = m[4]
