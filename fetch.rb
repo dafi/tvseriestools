@@ -3,9 +3,9 @@ require 'nokogiri'
 require "uri"
 require "json"
 require 'fileutils'
-require "./prettyFormatMovieName"
-require "./common"
-require "./TorrentUtils"
+require_relative "./prettyFormatMovieName"
+require_relative "./common"
+require_relative "./TorrentUtils"
 
 options = Common.parse_command_line('feeds.json')
 

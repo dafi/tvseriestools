@@ -1,5 +1,5 @@
 require 'zip'
-require "./prettyFormatMovieName"
+require_relative "./prettyFormatMovieName"
 require 'optparse'
 require 'ostruct'
 

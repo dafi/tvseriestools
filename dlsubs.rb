@@ -3,8 +3,8 @@ require 'nokogiri'
 require "uri"
 require "json"
 require 'fileutils'
-require "./prettyFormatMovieName"
-require "./common"
+require_relative "./prettyFormatMovieName"
+require_relative "./common"
 
 options = Common.parse_command_line('subs.json')
 options.excludeExts = ['.mp4', '.avi']
