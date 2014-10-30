@@ -38,17 +38,19 @@ class SubsDownloader
         }
         @options.tvSeries.each do |tvSerie|
             if tvSerie.downcase() == showName
-                badPrefix = "http://www.weebly.com/"
-                if url.start_with? badPrefix
+                puts url
+                badPrefix = /http:\/\/www.weebly.com.*http/
+                fixedUrl = url.gsub(badPrefix, 'http')
+                if url != fixedUrl
                     puts "Fixed invalid url #{url}"
-                    url = url[badPrefix.length, url.length]
+                    url = fixedUrl
                 end
                 puts "Downloading #{title}"
                 fullDestPath = File.join(@options.outputPath, fileName)
                 open(fullDestPath, 'wb') do |file|
                     file << open(url).read
                 end
-                Common.unzipAndPrettify(fullDestPath, @options.outputPath, true)
+#                Common.unzipAndPrettify(fullDestPath, @options.outputPath, true)
             end
         end
     end
