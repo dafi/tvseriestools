@@ -20,6 +20,7 @@ class SubsDownloader
     end
 
     def download
+        @tvseries_list = Common.get_tvseries_from_folders(@options.seriesFolders, @options.excludedFolders)
         @subsList.each do |s|
             send(s['titleParser'], s['feedUrl'])
         end
@@ -36,7 +37,7 @@ class SubsDownloader
             path = searchPath.gsub('%1', movieName.showName)
             Common.episode_exist?(path, movieName, @options.excludeExts)
         }
-        @options.tvSeries.each do |tvSerie|
+        @tvseries_list.each do |tvSerie|
             if tvSerie.downcase() == showName
                 puts url
                 badPrefix = /http:\/\/www.weebly.com.*http/
@@ -78,7 +79,7 @@ class SubsDownloader
                 Common.episode_exist?(path, movieName, @options.excludeExts)
             }
             url = item.xpath("link").text
-            @options.tvSeries.each do |tvSerie|
+            @tvseries_list.each do |tvSerie|
                 if tvSerie.downcase() == showName
                     puts "Downloading #{title}"
                     url.gsub!('action=view', 'action=downloadfile')

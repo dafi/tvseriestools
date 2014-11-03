@@ -27,27 +27,32 @@ class TorrentDownloader
         FileUtils::mkdir_p @options.outputPath if !File.exist?(@options.outputPath)
         FileUtils::mkdir_p @torrentsOutputPath if !File.exist?(@torrentsOutputPath)
 
-        @options.feeds.each do |url|
-            get_url(url)
+        # delete orphans torrent files
+        Dir.glob(File.join(@torrentsOutputPath, '*.torrent')).each { |f| File.delete(f) }
+
+        @tvseries_list = Common.get_tvseries_from_folders(@options.seriesFolders, @options.excludedFolders)
+        @options.aggregators.each do |template_url|
+            @tvseries_list.each { |name|
+                get_url(get_aggregator_url(template_url, name), name)
+            }
         end
     end
 
-    def get_url(url)
-        feedXml = open(url).read
+    def get_aggregator_url(aggregator_template_url, name)
+        return aggregator_template_url.gsub('%1', name)
+    end
 
-        # get just first feed item
-        singleLine = feedXml.gsub(/(\n|\r|\t)/, '')
-        tagItemBegin = singleLine.index('<item>')
-        tagItemEnd = singleLine.index('</item>', tagItemBegin)
-
-        singleLine = singleLine[tagItemBegin, tagItemEnd]
-        title = singleLine.match(/<title>(.*?)<\/title>/)
-
-        if title
-            obj = {'movie' => PrettyFormatMovieFilename.parse(title[1])}
-            link = singleLine.match(/<link>(.*?)<\/link>/)
-            obj['link'] = link[1] if link
-            add_title(obj)
+    def get_url(url, name)
+        Nokogiri::XML(open(url)).xpath("//item").each do |item|
+            title = item.xpath("title").text
+            link = item.xpath("link").text
+            movie = PrettyFormatMovieFilename.parse(title)
+            if movie && movie.showName == name
+                obj = {'movie' => movie}
+                obj['link'] = link if link
+                add_title(obj)
+                break
+            end
         end
     end
 
@@ -55,10 +60,10 @@ class TorrentDownloader
         @titles.push(title)
         if title["movie"]
             print "#{@blankLine}\r"
-            print "#{@titles.length}/#{@options.feeds.length} #{title["movie"].showName}\r"
+            print "#{@titles.length}/#{@tvseries_list.length} #{title["movie"].showName}\r"
         end
 
-        if @titles.length == @options.feeds.length
+        if @titles.length == @tvseries_list.length
 
             @titles.keep_if { |el|
                 !el["movie"].nil?
@@ -74,7 +79,6 @@ class TorrentDownloader
 
     def show_new_titles()
         itemsNews = []
-        links = []
 
         @titles.each do |title|
             next if @options.searchPaths.index { |searchPath|
@@ -82,29 +86,18 @@ class TorrentDownloader
                 Common.episode_exist?(path, title["movie"], @options.excludeExts)
             }
             prettyName = title["movie"].format()
-            puts "#{prettyName} is new"
-            links.push({"url" => title["link"], "label" => prettyName})
+            print "Downloading #{prettyName}..."
+            download_torrent(title["link"], prettyName)
+            puts " done"
         end
-        write_html(links)
     end
 
-    def write_html(links)
-        html = "<!DOCTYPE html><html><head><title>Movies to download</title></head><body>%1</body></html>"
-        htmlBody = ""
-
-        links.each do |link|
-            torrentUrl = TorrentUtils.getTorrentUrlFromFeedUrl(link["url"])
-            htmlBody = htmlBody + '<a href="' + torrentUrl + '">' + link["label"] + '</a><br/>';
-
-            # download torrent file
-            fullDestPath = File.join(@torrentsOutputPath, link["label"] + '.torrent');
-            open(fullDestPath, 'wb') do |file|
-                file << open(torrentUrl).read
-            end
+    def download_torrent(url, label)
+        torrentUrl = TorrentUtils.getTorrentUrlFromFeedUrl(url)
+        fullDestPath = File.join(@torrentsOutputPath, label + '.torrent');
+        open(fullDestPath, 'wb') do |file|
+            file << open(torrentUrl).read
         end
-
-        html = html.gsub('%1', htmlBody)
-        File.write(@reportOutputPath, html)
     end
 end
 

@@ -95,4 +95,17 @@ class Common
         return options
     end
 
+    def self.get_tvseries_from_folders(series_folders, excluded_folders)
+        list = []
+
+        series_folders.each { |dir|
+            Dir.foreach(dir) { |name|
+                next if name == '.' || name == '..' || File.file?(name) || excluded_folders.include?(name)
+                list.push(name.downcase())
+            }
+        }
+        return list
+    end
+
+
 end
