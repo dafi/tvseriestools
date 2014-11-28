@@ -39,7 +39,6 @@ class SubsDownloader
         }
         @tvseries_list.each do |tvSerie|
             if tvSerie.downcase() == showName
-                puts url
                 badPrefix = /http:\/\/www.weebly.com.*http/
                 fixedUrl = url.gsub(badPrefix, 'http')
                 if url != fixedUrl
@@ -74,7 +73,7 @@ class SubsDownloader
             next unless movieName
             showName = movieName.showName.downcase()
 
-            return if @options.searchPaths.index { |searchPath|
+            next if @options.searchPaths.index { |searchPath|
                 path = searchPath.gsub('%1', movieName.showName)
                 Common.episode_exist?(path, movieName, @options.excludeExts)
             }
@@ -92,6 +91,7 @@ class SubsDownloader
             end
         end
     end
+
 end
 
 SubsDownloader.new(options).download
