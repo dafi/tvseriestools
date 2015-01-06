@@ -15,7 +15,7 @@ class SubsDownloader
         FileUtils::mkdir_p @options.outputPath if !File.exist?(@options.outputPath)
         @subsList = [
             {"feedUrl" => 'http://subspedia.weebly.com/1/feed', "titleParser" => "subspedia"},
-            {"feedUrl" =>'http://subsfactory.it/subtitle/rss.php?', "titleParser" => "subsfactory"}
+            {"feedUrl" =>'http://www.subsfactory.it/categorie/sottotitoli/feed', "titleParser" => "subsfactory"}
         ]
     end
 
@@ -42,7 +42,7 @@ class SubsDownloader
                 badPrefix = /http:\/\/www.weebly.com.*http/
                 fixedUrl = url.gsub(badPrefix, 'http')
                 if url != fixedUrl
-                    puts "Fixed invalid url #{url}"
+                    puts "Fixed invalid url #{url}to #{fixedUrl}"
                     url = fixedUrl
                 end
                 puts "Downloading #{title}"
@@ -68,6 +68,10 @@ class SubsDownloader
     def subsfactory(url)
         Nokogiri::XML(open(url)).xpath("//channel/item").each do |item|
             title = item.xpath("title").text
+            # to allow a correct parsing replace some chars and append a fake extension
+            title.gsub!("\xD7".force_encoding("ISO-8859-1").encode("UTF-8"), "x")
+            title.gsub!(/[- ]/, '.')
+            title = title + ".ext"
 
             movieName = PrettyFormatMovieFilename.parse(title)
             next unless movieName
@@ -77,16 +81,17 @@ class SubsDownloader
                 path = searchPath.gsub('%1', movieName.showName)
                 Common.episode_exist?(path, movieName, @options.excludeExts)
             }
-            url = item.xpath("link").text
+
+            url = item.xpath("content:encoded").text.match(/href="(.*?download.*?)"/)[1]
+
             @tvseries_list.each do |tvSerie|
                 if tvSerie.downcase() == showName
                     puts "Downloading #{title}"
-                    url.gsub!('action=view', 'action=downloadfile')
-                    fullDestPath = File.join(@options.outputPath, "subfactory")
+                    fullDestPath = File.join(@options.outputPath, movieName.format + ".zip")
                     open(fullDestPath, 'wb') do |file|
                         file << open(url).read
                     end
-                    Common.unzipAndPrettify(fullDestPath, @options.outputPath, true)
+                    # Common.unzipAndPrettify(fullDestPath, @options.outputPath, true)
                 end
             end
         end
