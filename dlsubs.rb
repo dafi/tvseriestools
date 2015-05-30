@@ -71,6 +71,7 @@ class SubsDownloader
             # to allow a correct parsing replace some chars and append a fake extension
             title.gsub!("\xD7".force_encoding("ISO-8859-1").encode("UTF-8"), "x")
             title.gsub!(/[- ]/, '.')
+            title.gsub!(/&/, 'and')
             title = title + ".ext"
 
             movieName = PrettyFormatMovieFilename.parse(title)
