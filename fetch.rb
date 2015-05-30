@@ -43,9 +43,10 @@ class TorrentDownloader
     end
 
     def get_url(url, name)
+        url.gsub!(/^http/, "https")
         Nokogiri::XML(open(url)).xpath("//item").each do |item|
             title = item.xpath("title").text
-            link = item.xpath("link").text
+            link = item.xpath("link").text.gsub(/^http/, "https")
             movie = PrettyFormatMovieFilename.parse(title)
             if movie && movie.showName == name
                 obj = {'movie' => movie}
