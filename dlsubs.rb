@@ -14,7 +14,7 @@ class SubsDownloader
         @options = options
         FileUtils::mkdir_p @options.outputPath if !File.exist?(@options.outputPath)
         @subsList = [
-            {"feedUrl" => 'http://subspedia.weebly.com/1/feed', "titleParser" => "subspedia"},
+            {"feedUrl" => 'http://www.subspedia.tv/feed', "titleParser" => "subspedia"},
             {"feedUrl" =>'http://www.subsfactory.it/categorie/sottotitoli/feed', "titleParser" => "subsfactory"}
         ]
     end
@@ -27,7 +27,17 @@ class SubsDownloader
     end
 
     def subspedia_downloader(url, title)
-        fileName = File.basename(URI.parse(url).path)
+        m = title.gsub!(/ /, '.').match(/(.*?)\((\d+)x(\d+)\)/)
+        fileName = m[1]
+        season = m[2]
+        episode = m[3]
+        if (season.length == 1)
+            season = '0' + season
+        end
+        if (episode.length == 1)
+            episode = '0' + episode
+        end
+        fileName = fileName + 'S' + season + 'E' + episode + '.srt'
         movieName = PrettyFormatMovieFilename.parse(fileName)
 
         return unless movieName
@@ -39,18 +49,19 @@ class SubsDownloader
         }
         @tvseries_list.each do |tvSerie|
             if tvSerie.downcase() == showName
-                badPrefix = /http:\/\/www.weebly.com.*http/
-                fixedUrl = url.gsub(badPrefix, 'http')
-                if url != fixedUrl
-                    puts "Fixed invalid url #{url}to #{fixedUrl}"
-                    url = fixedUrl
-                end
-                puts "Downloading #{title}"
-                fullDestPath = File.join(@options.outputPath, fileName)
+                # badPrefix = /http:\/\/www.weebly.com.*http/
+                # fixedUrl = url.gsub(badPrefix, 'http')
+                # if url != fixedUrl
+                #     puts "Fixed invalid url #{url}to #{fixedUrl}"
+                #     url = fixedUrl
+                # end
+                puts "Downloading #{movieName.format}"
+                html_page = open(url).read
+                subs_url = 'http://www.subspedia.tv/' + html_page.match(/onClick=.downloadSub\('(.*?)'/)[1]
+                fullDestPath = File.join(@options.outputPath, movieName.format)
                 open(fullDestPath, 'wb') do |file|
-                    file << open(url).read
+                    file << open(subs_url).read
                 end
-#                Common.unzipAndPrettify(fullDestPath, @options.outputPath, true)
             end
         end
     end
@@ -58,10 +69,8 @@ class SubsDownloader
     def subspedia(url)
         Nokogiri::XML(open(url)).xpath("//channel/item").each do |item|
             title = item.xpath("title").text
-            item.xpath("content:encoded").text.match(/<a href='(.*zip)'/) { |m|
-                url = m[1]
-                subspedia_downloader(url, title)
-            }
+            url = item.xpath("link").text
+            subspedia_downloader(url, title)
         end
     end
 
