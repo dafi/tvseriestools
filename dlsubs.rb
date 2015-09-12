@@ -68,7 +68,8 @@ class SubsDownloader
 
     def subspedia(url)
         Nokogiri::XML(open(url)).xpath("//channel/item").each do |item|
-            title = item.xpath("title").text
+            # expand the & character to the string 'and'
+            title = item.xpath("title").text.sub(/&/, 'and')
             url = item.xpath("link").text
             subspedia_downloader(url, title)
         end
