@@ -30,12 +30,16 @@ class TorrentDownloader
         # delete orphans torrent files
         Dir.glob(File.join(@torrentsOutputPath, '*.torrent')).each { |f| File.delete(f) }
 
-        @tvseries_list = Common.get_tvseries_from_folders(@options.seriesFolders, @options.excludedFolders)
+        tvseries_list = Common.get_tvseries_from_folders(@options.seriesFolders, @options.excludedFolders)
+        episodes = []
         @options.aggregators.each do |template_url|
-            @tvseries_list.each { |name|
-                get_url(get_aggregator_url(template_url, name), name)
+            tvseries_list.each_with_index { |name,index|
+                print "#{@blankLine}\r"
+                print "#{index + 1}/#{tvseries_list.length} #{name}\r"
+                episodes.concat(get_url(get_aggregator_url(template_url, name), name))
             }
         end
+        download_all(episodes)
     end
 
     def get_aggregator_url(aggregator_template_url, name)
@@ -43,49 +47,42 @@ class TorrentDownloader
     end
 
     def get_url(url, name)
+        # force https usage
         url.gsub!(/^http/, "https")
+        episodes = []
+
         Nokogiri::XML(open(url)).xpath("//item").each do |item|
             title = item.xpath("title").text
             link = item.xpath("link").text.gsub(/^http/, "https")
-            movie = PrettyFormatMovieFilename.parse(title)
-            if movie && movie.showName == name
-                obj = {'movie' => movie}
-                obj['link'] = link if link
-                add_title(obj)
-                break
-            end
+
+            # skip 720p and 1080p files
+            next if title =~ /\b(720p|1080p)\b/ 
+            next if !link
+
+            new_ep = find_newer_episode(title, link, name)
+            next if !new_ep
+            # skip identical episodes
+            index = episodes.index { |ep|
+                ep['movie'].same_episode?(new_ep['movie'])
+            }
+            episodes.push(new_ep) if index.nil?
+        end
+        return episodes
+    end
+
+    def find_newer_episode(title, link, name)
+        movie = PrettyFormatMovieFilename.parse(title)
+        if movie && movie.showName == name
+            index = @options.searchPaths.index { |searchPath|
+                path = searchPath.gsub('%1', movie.showName)
+                Common.episode_exist?(path, movie, @options.excludeExts)
+            }
+            return {'movie' => movie, 'link' => link} if index.nil?
         end
     end
 
-    def add_title(title)
-        @titles.push(title)
-        if title["movie"]
-            print "#{@blankLine}\r"
-            print "#{@titles.length}/#{@tvseries_list.length} #{title["movie"].showName}\r"
-        end
-
-        if @titles.length == @tvseries_list.length
-
-            @titles.keep_if { |el|
-                !el["movie"].nil?
-            }
-
-            @titles.sort! { |a,b|
-                a["movie"].showName <=> b["movie"].showName
-            }
-            print "#{@blankLine}\r"
-            show_new_titles()
-        end
-    end
-
-    def show_new_titles()
-        itemsNews = []
-
-        @titles.each do |title|
-            next if @options.searchPaths.index { |searchPath|
-                path = searchPath.gsub('%1', title["movie"].showName)
-                Common.episode_exist?(path, title["movie"], @options.excludeExts)
-            }
+    def download_all(episodes)
+        episodes.each do |title|
             prettyName = title["movie"].format()
             print "Downloading #{prettyName}..."
             download_torrent(title["link"], prettyName)

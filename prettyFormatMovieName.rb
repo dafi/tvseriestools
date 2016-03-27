@@ -23,8 +23,8 @@ class PrettyFormatMovieFilename
         file.match(/(^.*?)\.s?([0-9]{1,2})\.?[e|x]?([0-9]{2})(.*?)\.?.*(\..{3})/i) { |m|
             if m.length == 6
                 p = PrettyFormatMovieFilename.new
-                # replace '_' with '.' and ensure '.' isn't repeated (eg '...' must be '.')
-                p.showName = m[1].gsub(/[^a-z0-9]+$/, '').gsub(/_/, '.').gsub(/\.+/, '.')
+                # replace '-' and _' with '.' and ensure '.' isn't repeated (eg '...' must be '.')
+                p.showName = m[1].gsub(/[^a-z0-9]+$/, '').gsub(/[-_]/, '.').gsub(/\.+/, '.')
                 p.season = m[2].to_i
                 p.episode = m[3].to_i
                 p.extraText = m[4]
@@ -85,5 +85,19 @@ class PrettyFormatMovieFilename
         " extraText: #{@extraText}" <<
         " ext: #{@ext}" <<
         " year: #{@year}"
+    end
+
+    def same_episode?(other)
+        @showName == other.showName &&
+        @season == other.season && 
+        @episode == other.episode
+    end
+
+    def older_episode?(other)
+        # compare showName removing all not alphanumeric characters
+        if showName.gsub(/[^a-zA-Z0-9]/i, '') == other.showName.gsub(/[^a-zA-Z0-9]/i, '')
+            return season < other.season || episode <= other.episode
+        end
+        return false
     end
 end
