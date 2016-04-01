@@ -56,7 +56,7 @@ class TorrentDownloader
             link = item.xpath("link").text.gsub(/^http/, "https")
 
             # skip 720p and 1080p files
-            next if title =~ /\b(720p|1080p)\b/ 
+            next if title =~ /\b(480p|720p|1080p)\b/ 
             next if !link
 
             new_ep = find_newer_episode(title, link, name)
@@ -88,6 +88,7 @@ class TorrentDownloader
             download_torrent(title["link"], prettyName)
             puts " done"
         end
+        puts
     end
 
     def download_torrent(url, label)
