@@ -7,7 +7,7 @@ require_relative "./prettyFormatMovieName"
 require_relative "./common"
 
 options = Common.parse_command_line('subs.json')
-options.excludeExts = ['.mp4', '.avi']
+options.excludeExts = ['.mp4', '.avi', '.mkv']
 
 class SubsDownloader
     def initialize(options)
