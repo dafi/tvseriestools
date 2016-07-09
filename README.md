@@ -19,4 +19,5 @@ See [pretty-format-movie-filename](https://github.com/dafi/pretty-format-movie-f
 
 	gem install nokogiri
 	gem install rubyzip
+	gem install open_uri_redirections
 

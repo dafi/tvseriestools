@@ -1,4 +1,5 @@
 require 'open-uri'
+require 'open_uri_redirections'
 require 'nokogiri'
 require "uri"
 require "json"
@@ -51,7 +52,7 @@ class TorrentDownloader
         url.gsub!(/^http/, "https")
         episodes = []
 
-        Nokogiri::XML(open(url)).xpath("//item").each do |item|
+        Nokogiri::XML(open(url, :allow_redirections => :safe)).xpath("//item").each do |item|
             title = item.xpath("title").text
             link = item.xpath("link").text.gsub(/^http/, "https")
 
@@ -95,7 +96,7 @@ class TorrentDownloader
         torrentUrl = TorrentUtils.getTorrentUrlFromFeedUrl(url)
         fullDestPath = File.join(@torrentsOutputPath, label + '.torrent');
         open(fullDestPath, 'wb') do |file|
-            file << open(torrentUrl).read
+            file << open(torrentUrl, :allow_redirections => :safe).read
         end
     end
 end
