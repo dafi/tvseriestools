@@ -6,7 +6,7 @@ require "json"
 require 'fileutils'
 require_relative "./prettyFormatMovieName"
 require_relative "./common"
-require_relative "./TorrentUtils"
+require_relative "./torrentUtils"
 
 options = Common.parse_command_line('feeds.json')
 
