@@ -1,12 +1,13 @@
+#!/usr/bin/env ruby
 require 'open-uri'
 require 'open_uri_redirections'
 require 'nokogiri'
-require "uri"
-require "json"
+require 'uri'
+require 'json'
 require 'fileutils'
-require_relative "./prettyFormatMovieName"
-require_relative "./common"
-require_relative "./torrentUtils"
+require_relative './prettyFormatMovieName'
+require_relative './common'
+require_relative './torrentUtils'
 
 options = Common.parse_command_line('feeds.json')
 
@@ -18,9 +19,8 @@ class TorrentDownloader
     def initialize(options)
         @options = options
         @torrentsOutputPath = File.join(options.outputPath, 'torrents')
-        @reportOutputPath = File.join(options.outputPath, 'listmovies.html')
 
-        @blankLine = " " * `/usr/bin/env tput cols`.to_i
+        @blankLine = ' ' * `/usr/bin/env tput cols`.to_i
     end
 
     def fetch()
@@ -49,15 +49,15 @@ class TorrentDownloader
 
     def get_url(url, name)
         # force https usage
-        url.gsub!(/^http/, "https")
+        url.gsub!(/^http/, 'https')
         episodes = []
 
-        Nokogiri::XML(open(url, :allow_redirections => :safe)).xpath("//item").each do |item|
-            title = item.xpath("title").text
-            link = item.xpath("link").text.gsub(/^http/, "https")
+        Nokogiri::XML(open(url, :allow_redirections => :safe)).xpath('//item').each do |item|
+            title = item.xpath('title').text
+            link = item.xpath('link').text.gsub(/^http/, 'https')
 
             # skip 720p and 1080p files
-            next if title =~ /\b(480p|720p|1080p)\b/ 
+            next if title =~ /\b(480p|720p|1080p)\b/
             next if !link
 
             new_ep = find_newer_episode(title, link, name)
@@ -84,17 +84,17 @@ class TorrentDownloader
 
     def download_all(episodes)
         episodes.each do |title|
-            prettyName = title["movie"].format()
+            prettyName = title['movie'].format()
             print "Downloading #{prettyName}..."
-            download_torrent(title["link"], prettyName)
-            puts " done"
+            download_torrent(title['link'], prettyName)
+            puts ' done'
         end
         puts
     end
 
     def download_torrent(url, label)
         torrentUrl = TorrentUtils.getTorrentUrlFromFeedUrl(url)
-        fullDestPath = File.join(@torrentsOutputPath, label + '.torrent');
+        fullDestPath = File.join(@torrentsOutputPath, label + '.torrent')
         open(fullDestPath, 'wb') do |file|
             file << open(torrentUrl, :allow_redirections => :safe).read
         end

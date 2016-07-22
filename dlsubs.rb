@@ -1,10 +1,11 @@
+#!/usr/bin/env ruby
 require 'open-uri'
 require 'nokogiri'
-require "uri"
-require "json"
+require 'uri'
+require 'json'
 require 'fileutils'
-require_relative "./prettyFormatMovieName"
-require_relative "./common"
+require_relative './prettyFormatMovieName'
+require_relative './common'
 
 options = Common.parse_command_line('subs.json')
 options.excludeExts = ['.mp4', '.avi', '.mkv']
@@ -14,8 +15,8 @@ class SubsDownloader
         @options = options
         FileUtils::mkdir_p @options.outputPath if !File.exist?(@options.outputPath)
         @subsList = [
-            {"feedUrl" => 'http://www.subspedia.tv/feed', "titleParser" => "subspedia"},
-            {"feedUrl" =>'http://www.subsfactory.it/categorie/sottotitoli/feed', "titleParser" => "subsfactory"}
+            {'feedUrl' => 'http://www.subspedia.tv/feed', 'titleParser' => 'subspedia'},
+            {'feedUrl' =>'http://www.subsfactory.it/categorie/sottotitoli/feed', 'titleParser' => 'subsfactory'}
         ]
     end
 
@@ -67,22 +68,22 @@ class SubsDownloader
     end
 
     def subspedia(url)
-        Nokogiri::XML(open(url)).xpath("//channel/item").each do |item|
+        Nokogiri::XML(open(url)).xpath('//channel/item').each do |item|
             # expand the & character to the string 'and'
-            title = item.xpath("title").text.sub(/&/, 'and')
-            url = item.xpath("link").text
+            title = item.xpath('title').text.sub(/&/, 'and')
+            url = item.xpath('link').text
             subspedia_downloader(url, title)
         end
     end
 
     def subsfactory(url)
-        Nokogiri::XML(open(url)).xpath("//channel/item").each do |item|
-            title = item.xpath("title").text
+        Nokogiri::XML(open(url)).xpath('//channel/item').each do |item|
+            title = item.xpath('title').text
             # to allow a correct parsing replace some chars and append a fake extension
-            title.gsub!("\xD7".force_encoding("ISO-8859-1").encode("UTF-8"), "x")
+            title.gsub!("\xD7".force_encoding('ISO-8859-1').encode('UTF-8'), 'x')
             title.gsub!(/[- ]/, '.')
             title.gsub!(/&/, 'and')
-            title = title + ".ext"
+            title = title + '.ext'
 
             movieName = PrettyFormatMovieFilename.parse(title)
             next unless movieName
@@ -93,12 +94,12 @@ class SubsDownloader
                 Common.episode_exist?(path, movieName, @options.excludeExts)
             }
 
-            url = item.xpath("content:encoded").text.match(/href="(.*?download.*?)"/)[1]
+            url = item.xpath('content:encoded').text.match(/href="(.*?download.*?)"/)[1]
 
             @tvseries_list.each do |tvSerie|
                 if tvSerie.downcase() == showName
                     puts "Downloading #{title}"
-                    fullDestPath = File.join(@options.outputPath, movieName.format + ".zip")
+                    fullDestPath = File.join(@options.outputPath, movieName.format + '.zip')
                     open(fullDestPath, 'wb') do |file|
                         file << open(url).read
                     end

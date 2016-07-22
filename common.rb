@@ -58,10 +58,11 @@ class Common
             end
         end
         Zip.on_exists_proc = on_exists
-        
+
         File.delete(zipPath) if deleteZip
     end
 
+    # rubocop:disable Metrics/LineLength
     def self.parse_command_line(default_config_file_name)
         cmd_opts = OpenStruct.new
         cmd_opts.config_file = nil
@@ -91,6 +92,7 @@ class Common
 
         return options
     end
+    # rubocop:enable Metrics/LineLength
 
     def self.get_tvseries_from_folders(series_folders, excluded_folders)
         list = []

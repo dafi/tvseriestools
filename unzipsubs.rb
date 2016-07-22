@@ -2,9 +2,9 @@
 # then prettify the .srt files and delete the original .zip
 # Only zip file names in tvseries format are unzipped
 
-require "json"
-require_relative "./prettyFormatMovieName"
-require_relative "./common"
+require 'json'
+require_relative './prettyFormatMovieName'
+require_relative './common'
 
 options = Common.parse_command_line('subs.json')
 
@@ -20,11 +20,11 @@ def unzipAndPrettify(zipPath, destPath, deleteZip)
         end
     end
     Zip.on_exists_proc = on_exists
-    
+
     File.delete(zipPath) if deleteZip
 end
 
-Dir[File.join(options.outputPath, "*.zip")].each { |f|
+Dir[File.join(options.outputPath, '*.zip')].each { |f|
     parsed = PrettyFormatMovieFilename.parse(File.basename(f))
 
     unzipAndPrettify(f, options.outputPath, true) if parsed

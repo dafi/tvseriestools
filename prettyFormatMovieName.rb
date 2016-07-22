@@ -11,7 +11,7 @@ class PrettyFormatMovieFilename
 
         # remove year if present
         p = nil
-        year = ""
+        year = ''
         file.match(/.([0-9]{4})./) { |m|
             if m.length == 2
                 year = m[1]
@@ -56,14 +56,14 @@ class PrettyFormatMovieFilename
         end
         return nil
     end
-    
+
     def format
-        s = sprintf("%s.s%02de%02d", @showName, @season, @episode)
+        s = sprintf('%s.s%02de%02d', @showName, @season, @episode)
         if !@extraText.nil? && !@extraText.empty?
-            s << "." + @extraText
+            s << '.' + @extraText
         end
         if !@ext.nil? && !@ext.empty?
-            s << "." + @ext
+            s << '.' + @ext
         end
 
         return s
@@ -71,17 +71,17 @@ class PrettyFormatMovieFilename
 
     def ==(other)
         @showName == other.showName &&
-        @season == other.season && 
-        @episode == other.episode && 
-        @extraText == other.extraText && 
-        @ext == other.ext && 
+        @season == other.season &&
+        @episode == other.episode &&
+        @extraText == other.extraText &&
+        @ext == other.ext &&
         @year == other.year
     end
 
     def to_s
         "showName: #{@showName}" <<
-        " season: #{@season}" << 
-        " episode: #{@episode}" << 
+        " season: #{@season}" <<
+        " episode: #{@episode}" <<
         " extraText: #{@extraText}" <<
         " ext: #{@ext}" <<
         " year: #{@year}"
@@ -89,7 +89,7 @@ class PrettyFormatMovieFilename
 
     def same_episode?(other)
         @showName == other.showName &&
-        @season == other.season && 
+        @season == other.season &&
         @episode == other.episode
     end
 
