@@ -10,61 +10,27 @@ require_relative './common'
 options = Common.parse_command_line('subs.json')
 options.excludeExts = ['.mp4', '.avi', '.mkv']
 
+# Used to download missing subtitles from specified url list
 class SubsDownloader
     def initialize(options)
         @options = options
-        FileUtils::mkdir_p @options.outputPath if !File.exist?(@options.outputPath)
-        @subsList = [
-            {'feedUrl' => 'http://www.subspedia.tv/feed', 'titleParser' => 'subspedia'},
-            {'feedUrl' =>'http://www.subsfactory.it/categorie/sottotitoli/feed', 'titleParser' => 'subsfactory'}
-        ]
+        FileUtils.mkdir_p @options.outputPath unless File.exist?(@options.outputPath)
     end
 
     def download
-        @tvseries_list = Common.get_tvseries_from_folders(@options.seriesFolders, @options.excludedFolders)
-        @subsList.each do |s|
-            send(s['titleParser'], s['feedUrl'])
-        end
+        @tvseries_list = Common.get_tvseries_from_folders(
+            @options.seriesFolders,
+            @options.excludedFolders)
+        @options['feeds'].each { |s| send(s['titleParser'], s['feedUrl']) }
     end
 
     def subspedia_downloader(url, title)
-        m = title.gsub!(/ /, '.').match(/(.*?)\((\d+)x(\d+)\)/)
-        fileName = m[1]
-        season = m[2]
-        episode = m[3]
-        if (season.length == 1)
-            season = '0' + season
-        end
-        if (episode.length == 1)
-            episode = '0' + episode
-        end
-        fileName = fileName + 'S' + season + 'E' + episode + '.srt'
-        movieName = PrettyFormatMovieFilename.parse(fileName)
+        movie_name = subspedia_movie_from_title(title)
+        return if movie_name.nil? || episode_exist?(movie_name)
 
-        return unless movieName
-        showName = movieName.showName.downcase()
-
-        return if @options.searchPaths.index { |searchPath|
-            path = searchPath.gsub('%1', movieName.showName)
-            Common.episode_exist?(path, movieName, @options.excludeExts)
-        }
-        @tvseries_list.each do |tvSerie|
-            if tvSerie.downcase() == showName
-                # badPrefix = /http:\/\/www.weebly.com.*http/
-                # fixedUrl = url.gsub(badPrefix, 'http')
-                # if url != fixedUrl
-                #     puts "Fixed invalid url #{url}to #{fixedUrl}"
-                #     url = fixedUrl
-                # end
-                puts "Downloading #{movieName.format}"
-                html_page = open(url).read
-                subs_url = 'http://www.subspedia.tv/' + html_page.match(/onClick=.downloadSub\('(.*?)'/)[1]
-                fullDestPath = File.join(@options.outputPath, movieName.format)
-                open(fullDestPath, 'wb') do |file|
-                    file << open(subs_url).read
-                end
-            end
-        end
+        html_page = open(url).read
+        subs_url = 'http://www.subspedia.tv/' + html_page.match(/onClick=.downloadSub\('(.*?)'/)[1]
+        download_missing_tv_series_subs(subs_url, movie_name)
     end
 
     def subspedia(url)
@@ -76,39 +42,67 @@ class SubsDownloader
         end
     end
 
+    def subspedia_movie_from_title(title)
+        m = title.tr(' ', '.').match(/(.*?)\((\d+)x(\d+)\)/)
+        file_name = m[1]
+        season = format('%02d', m[2])
+        episode = format('%02d', m[3])
+
+        file_name = file_name + 'S' + season + 'E' + episode + '.srt'
+        return PrettyFormatMovieFilename.parse(file_name)
+    end
+
     def subsfactory(url)
         Nokogiri::XML(open(url)).xpath('//channel/item').each do |item|
-            title = item.xpath('title').text
-            # to allow a correct parsing replace some chars and append a fake extension
-            title.gsub!("\xD7".force_encoding('ISO-8859-1').encode('UTF-8'), 'x')
-            title.gsub!(/[- ]/, '.')
-            title.gsub!(/&/, 'and')
-            title = title + '.ext'
-
-            movieName = PrettyFormatMovieFilename.parse(title)
-            next unless movieName
-            showName = movieName.showName.downcase()
-
-            next if @options.searchPaths.index { |searchPath|
-                path = searchPath.gsub('%1', movieName.showName)
-                Common.episode_exist?(path, movieName, @options.excludeExts)
-            }
+            movie_name = subsfactory_movie_from_title(item.xpath('title').text)
+            next if movie_name.nil? || episode_exist?(movie_name)
 
             url = item.xpath('content:encoded').text.match(/href="(.*?download.*?)"/)[1]
-
-            @tvseries_list.each do |tvSerie|
-                if tvSerie.downcase() == showName
-                    puts "Downloading #{title}"
-                    fullDestPath = File.join(@options.outputPath, movieName.format + '.zip')
-                    open(fullDestPath, 'wb') do |file|
-                        file << open(url).read
-                    end
-                    # Common.unzipAndPrettify(fullDestPath, @options.outputPath, true)
-                end
-            end
+            download_missing_tv_series_subs(url, movie_name, 'zip')
         end
     end
 
+    def subsfactory_movie_from_title(title)
+        # to allow a correct parsing replace some chars and append a fake extension
+        title.gsub!("\xD7".force_encoding('ISO-8859-1').encode('UTF-8'), 'x')
+        title.gsub!(/[- ]/, '.')
+        title.gsub!(/&/, 'and')
+        title += '.ext'
+
+        return PrettyFormatMovieFilename.parse(title)
+    end
+
+    def episode_exist?(movie)
+        !@options.searchPaths.index do |search_path|
+            path = search_path.gsub('%1', movie.showName)
+            Common.episode_exist?(path, movie, @options.excludeExts)
+        end.nil?
+    end
+
+    def download_missing_tv_series_subs(url, movie_name, default_ext = nil)
+        show_name = movie_name.showName.downcase
+        @tvseries_list.each do |tv_serie|
+            next unless tv_serie.downcase == show_name
+            download_subs(url, movie_name, default_ext)
+        end
+    end
+
+    def download_subs(url, movie_name, default_ext = nil)
+        movie_name_copy = movie_name.clone
+        # the downloaded file could be .zip or .srt so use its own extension
+        movie_name_copy.ext = get_url_extension(url, default_ext)
+        file_name = movie_name_copy.format
+
+        puts "Downloading #{file_name}"
+        open(File.join(@options.outputPath, file_name), 'wb') do |file|
+            file << open(url).read
+        end
+    end
+
+    def get_url_extension(url, default_ext)
+        m = URI(url).path.match(/^.*\.(.*)$/)
+        return m ? m[1] : default_ext.nil? ? '' : default_ext
+    end
 end
 
 SubsDownloader.new(options).download
