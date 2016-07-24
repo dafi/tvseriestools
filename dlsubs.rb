@@ -21,7 +21,7 @@ class SubsDownloader
         @tvseries_list = Common.get_tvseries_from_folders(
             @options.seriesFolders,
             @options.excludedFolders)
-        @options['feeds'].each { |s| send(s['titleParser'], s['feedUrl']) }
+        @options.feeds.each { |s| send(s['titleParser'], s['feedUrl']) }
     end
 
     def subspedia_downloader(url, title)
