@@ -18,14 +18,13 @@ options.excludeExts = ['.zip', '.srt'];
 class TorrentDownloader
     def initialize(options)
         @options = options
-        @torrentsOutputPath = File.join(options.outputPath, 'torrents')
+        @torrentsOutputPath = options.outputPath
 
         @blankLine = ' ' * `/usr/bin/env tput cols`.to_i
     end
 
     def fetch()
         @titles = []
-        FileUtils::mkdir_p @options.outputPath if !File.exist?(@options.outputPath)
         FileUtils::mkdir_p @torrentsOutputPath if !File.exist?(@torrentsOutputPath)
 
         # delete orphans torrent files
