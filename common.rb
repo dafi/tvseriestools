@@ -48,20 +48,6 @@ class Common
         return File.join(scriptDir, config['outputPath'])
     end
 
-    def self.unzipAndPrettify(zipPath, destPath, deleteZip)
-        on_exists = Zip.on_exists_proc
-        Zip.on_exists_proc = true
-        Zip::File.open(zipPath) do |zip_file|
-            zip_file.each do |entry|
-                entry.extract(File.join(destPath, entry.name))
-                self.renamePrettified(destPath, entry.name)
-            end
-        end
-        Zip.on_exists_proc = on_exists
-
-        File.delete(zipPath) if deleteZip
-    end
-
     # rubocop:disable Metrics/LineLength
     def self.parse_command_line(default_config_file_name)
         cmd_opts = OpenStruct.new
