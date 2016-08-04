@@ -10,10 +10,10 @@ if ARGV.empty?
 else
     path = ARGV.first.to_s
     if File.file?(path)
-        Common.renamePrettified(File.dirname(path), File.basename(path))
+        Common.rename_prettified(File.dirname(path), File.basename(path))
     else
         Dir.foreach(path).each do |f|
-            Common.renamePrettified(path, f) unless f == '.' || f == '..'
+            Common.rename_prettified(path, f) unless f == '.' || f == '..'
         end
     end
 end

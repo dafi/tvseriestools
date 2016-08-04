@@ -3,101 +3,110 @@ require 'open-uri'
 require 'open_uri_redirections'
 require 'nokogiri'
 require 'uri'
-require 'json'
 require 'fileutils'
-require_relative './prettyFormatMovieName'
+require_relative './pretty_format_movie_name'
 require_relative './common'
-require_relative './torrentUtils'
+require_relative './torrent_utils'
 
 options = Common.parse_command_line('feeds.json')
 
 # files ending with these extensions will be not considered movies
 # and will not be used to check if movies must be downloaded
-options.excludeExts = ['.zip', '.srt'];
+options.excludeExts = ['.zip', '.srt']
 
+# Download .torrent files for missing episodes
 class TorrentDownloader
     def initialize(options)
         @options = options
-        @torrentsOutputPath = options.outputPath
+        @torrents_path = options.outputPath
 
-        @blankLine = ' ' * `/usr/bin/env tput cols`.to_i
+        @blank_line = ' ' * `/usr/bin/env tput cols`.to_i
     end
 
-    def fetch()
-        @titles = []
-        FileUtils::mkdir_p @torrentsOutputPath if !File.exist?(@torrentsOutputPath)
+    def fetch
+        FileUtils.mkdir_p @torrents_path unless File.exist?(@torrents_path)
 
-        # delete orphans torrent files
-        Dir.glob(File.join(@torrentsOutputPath, '*.torrent')).each { |f| File.delete(f) }
+        delete_orphan_torrents
 
         tvseries_list = Common.get_tvseries_from_folders(@options.seriesFolders, @options.excludedFolders)
         episodes = []
         @options.aggregators.each do |template_url|
-            tvseries_list.each_with_index { |name,index|
-                print "#{@blankLine}\r"
-                print "#{index + 1}/#{tvseries_list.length} #{name}\r"
-                episodes.concat(get_url(get_aggregator_url(template_url, name), name))
-            }
+            find_missing_episodes(tvseries_list, template_url, episodes)
         end
         download_all(episodes)
     end
 
-    def get_aggregator_url(aggregator_template_url, name)
-        return aggregator_template_url.gsub('%1', name)
+    def delete_orphan_torrents
+        Dir.glob(File.join(@torrents_path, '*.torrent')).each { |f| File.delete(f) }
     end
 
-    def get_url(url, name)
-        # force https usage
-        url.gsub!(/^http/, 'https')
-        episodes = []
-
-        Nokogiri::XML(open(url, :allow_redirections => :safe)).xpath('//item').each do |item|
-            title = item.xpath('title').text
-            link = item.xpath('link').text.gsub(/^http/, 'https')
-
-            # skip 720p and 1080p files
-            next if title =~ /\b(480p|720p|1080p)\b/
-            next if !link
-
-            new_ep = find_newer_episode(title, link, name)
-            next if !new_ep
-            # skip identical episodes
-            index = episodes.index { |ep|
-                ep['movie'].same_episode?(new_ep['movie'])
-            }
-            episodes.push(new_ep) if index.nil?
-        end
-        return episodes
-    end
-
-    def find_newer_episode(title, link, name)
-        movie = PrettyFormatMovieFilename.parse(title)
-        if movie && movie.showName == name
-            index = @options.searchPaths.index { |searchPath|
-                path = searchPath.gsub('%1', movie.showName)
-                Common.episode_exist?(path, movie, @options.excludeExts)
-            }
-            return {'movie' => movie, 'link' => link} if index.nil?
-        end
-    end
-
-    def download_all(episodes)
-        episodes.each do |title|
-            prettyName = title['movie'].format()
-            print "Downloading #{prettyName}..."
-            download_torrent(title['link'], prettyName)
-            puts ' done'
+    def find_missing_episodes(tvseries_list, template_url, episodes)
+        tvseries_list.each_with_index do |name, index|
+            print "#{@blank_line}\r"
+            print "#{index + 1}/#{tvseries_list.length} #{name}\r"
+            episodes.concat(get_url(get_aggregator_url(template_url, name), name))
         end
         puts
     end
 
+    def get_aggregator_url(aggregator_template_url, name)
+        aggregator_template_url.gsub('%1', name)
+    end
+
+    def get_url(url, name)
+        episodes = []
+
+        Nokogiri::XML(open(url, allow_redirections: :safe)).xpath('//item').each do |item|
+            title = item.xpath('title').text
+            link = item.xpath('link').text
+
+            next unless link
+            # skip 720p and 1080p files
+            next if title =~ /\b(480p|720p|1080p)\b/
+
+            new_ep = find_newer_episode(title, link, name)
+            next if !new_ep || contain_episode?(episodes, new_ep['movie'])
+            episodes.push(new_ep)
+        end
+        episodes
+    end
+
+    def find_newer_episode(title, link, name)
+        movie = PrettyFormatMovieName.parse(title)
+        if movie && movie.showName == name
+            index = @options.searchPaths.index do |search_path|
+                path = search_path.gsub('%1', movie.showName)
+                Common.episode_exist?(path, movie, @options.excludeExts)
+            end
+            return { 'movie' => movie, 'link' => link } if index.nil?
+        end
+    end
+
+    # The feed page can contain more links for the same episode
+    # so check if the episodes list already contains it
+    def contain_episode?(episodes, new_episode)
+        !episodes.index do |ep|
+            ep['movie'].same_episode?(new_episode)
+        end.nil?
+    end
+
+    def download_all(episodes)
+        episodes.each do |title|
+            pretty_name = title['movie'].format
+            print "Downloading #{pretty_name}..."
+            download_torrent(title['link'], pretty_name)
+            puts ' done'
+        end
+    end
+
     def download_torrent(url, label)
-        torrentUrl = TorrentUtils.getTorrentUrlFromFeedUrl(url)
-        fullDestPath = File.join(@torrentsOutputPath, label + '.torrent')
-        open(fullDestPath, 'wb') do |file|
-            file << open(torrentUrl, :allow_redirections => :safe).read
+        torrent_url = TorrentUtils.instance.get_torrent_url_from_feed(url)
+        full_dest_path = File.join(@torrents_path, label + '.torrent')
+        open(full_dest_path, 'wb') do |file|
+            file << open(torrent_url, allow_redirections: :safe).read
         end
     end
 end
 
+TorrentUtils.instance.load_search_engines(options.searchEngineConfigPath)
 TorrentDownloader.new(options).fetch

@@ -1,28 +1,16 @@
-require './prettyFormatMovieName'
-# require 'ostruct'
+#!/usr/bin/env ruby
+require './pretty_format_movie_name'
 require 'json'
-# require 'optparse'
-# require 'ostruct'
 
-def runTestSuite
-    # openStruct needs an hash at first level so we wrap the json
-    JSON.parse('{"arr": ' + open('../pretty-format-movie-filename/testSuite.json').read + '}')['arr'].each do |test|
-        expected = test['expectedResult']
-        result = PrettyFormatMovieFilename.parse(test['inputValue'])
-        if !result || \
-            result.showName != expected['showName'] || \
-            result.season != expected['season'] || \
-            result.episode != expected['episode'] || \
-            result.extraText != expected['extraText'] || \
-            result.ext != expected['ext'] || \
-            result.year != expected['year']
-            puts 'Test failed'
-            puts 'expected ' + expected.to_s
-            puts 'found ' + (result ? result.to_s : 'null')
-        end
+def run_test_suite
+    JSON.parse(open('./testSuite.json').read).each do |test|
+        expected = PrettyFormatMovieName.from_map(test['expectedResult'])
+        result = PrettyFormatMovieName.parse(test['inputValue'])
+        next if expected == result
+        puts 'Test failed'
+        puts "expected #{expected}"
+        puts "found    #{result}"
     end
-
 end
 
-runTestSuite
-
+run_test_suite

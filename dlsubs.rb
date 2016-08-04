@@ -4,7 +4,7 @@ require 'nokogiri'
 require 'uri'
 require 'json'
 require 'fileutils'
-require_relative './prettyFormatMovieName'
+require_relative './pretty_format_movie_name'
 require_relative './common'
 
 options = Common.parse_command_line('subs.json')
@@ -49,7 +49,7 @@ class SubsDownloader
         episode = format('%02d', m[3])
 
         file_name = file_name + 'S' + season + 'E' + episode + '.srt'
-        return PrettyFormatMovieFilename.parse(file_name)
+        PrettyFormatMovieName.parse(file_name)
     end
 
     def subsfactory(url)
@@ -69,7 +69,7 @@ class SubsDownloader
         title.gsub!(/&/, 'and')
         title += '.ext'
 
-        return PrettyFormatMovieFilename.parse(title)
+        PrettyFormatMovieName.parse(title)
     end
 
     def episode_exist?(movie)
@@ -101,7 +101,7 @@ class SubsDownloader
 
     def get_url_extension(url, default_ext)
         m = URI(url).path.match(/^.*\.(.*)$/)
-        return m ? m[1] : default_ext.nil? ? '' : default_ext
+        m ? m[1] : default_ext.nil? ? '' : default_ext
     end
 end
 

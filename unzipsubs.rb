@@ -2,10 +2,10 @@
 # Extract from .zip the subtitles .srt files
 # then prettify the .srt files and delete the original .zip
 # Only zip file names in tvseries format are unzipped
-# If the zip file contains more than one srt files they are all unzipped on a directory
+# If the zip file contains more than one srt file they are all unzipped to a directory
 
 require 'json'
-require_relative './prettyFormatMovieName'
+require_relative './pretty_format_movie_name'
 require_relative './common'
 
 options = Common.parse_command_line('subs.json')
@@ -25,7 +25,7 @@ def unzip_and_prettify(zip_path, dest_path, delete_zip)
         zip_entries = zip_file.glob('*.srt')
 
         if zip_entries.count == 1
-            Common.renamePrettified(dest_path, zip_entries.first.name)
+            Common.rename_prettified(dest_path, zip_entries.first.name)
         elsif zip_entries.count > 1
             create_unzipped_directory(zip_path, dest_path, zip_entries)
         end
@@ -36,28 +36,27 @@ def unzip_and_prettify(zip_path, dest_path, delete_zip)
 end
 
 # Test to see if the file_name is already prettified
+# If file_name can't be prettified return true
 def prettified?(file_name)
-    parsed = PrettyFormatMovieFilename.parse(file_name)
+    parsed = PrettyFormatMovieName.parse(file_name)
 
-    return parsed.nil? && parsed.format == file_name
+    parsed.nil? || parsed.format == file_name
 end
 
 def prettify_file(dest_path, file_name)
-    Common.renamePrettified(dest_path, file_name) unless prettified?(file_name)
+    Common.rename_prettified(dest_path, file_name) unless prettified?(file_name)
 end
 
 def prettify_archive(zip_path, dest_path, delete_zip)
     # unzip only filename in tv series format
-    parsed = PrettyFormatMovieFilename.parse(File.basename(zip_path))
+    parsed = PrettyFormatMovieName.parse(File.basename(zip_path))
 
     unzip_and_prettify(zip_path, dest_path, delete_zip) if parsed
 end
 
 def prettify_directory(src_path, dest_path, delete_zip)
     Dir.foreach(src_path).each do |f|
-        extname = File.extname(f)
-
-        case extname
+        case File.extname(f)
         when '.zip'
             zip_path = File.join(src_path, f)
             prettify_archive(zip_path, dest_path, delete_zip)
