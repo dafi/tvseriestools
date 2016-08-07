@@ -16,7 +16,7 @@ class TorrentUtils
     end
 
     def get_torrent_url_from_feed(feed_url)
-        html = open(feed_url).read.gsub(/(\n|\r|\t)/, '')
+        html = open(feed_url, allow_redirections: :safe).read.gsub(/(\n|\r|\t)/, '')
 
         @engine_list.each do |engine|
             torrent_id = find_torrent_id(engine, html)
@@ -44,7 +44,7 @@ class TorrentUtils
         return engine['urlPattern'].gsub('$1', torrent_id) unless engine['urlDestPage']
 
         url_dest_page = engine['urlDestPage'].gsub('$1', torrent_id)
-        html = open(url_dest_page).read.gsub(/(\n|\r|\t)/, '')
+        html = open(url_dest_page, allow_redirections: :safe).read.gsub(/(\n|\r|\t)/, '')
         html.match(engine['reDestPage']) do |m|
             return engine['urlPattern'].gsub('$1', m[1])
         end
