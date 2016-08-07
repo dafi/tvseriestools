@@ -57,8 +57,8 @@ class TorrentDownloader
         episodes = []
 
         Nokogiri::XML(open(url, allow_redirections: :safe)).xpath('//item').each do |item|
+            link = link_from_rss_node(item)
             title = item.xpath('title').text
-            link = item.xpath('link').text
 
             next unless link
             # skip 720p and 1080p files
@@ -69,6 +69,13 @@ class TorrentDownloader
             episodes.push(new_ep)
         end
         episodes
+    end
+
+    def link_from_rss_node(item)
+        # the direct link to the .torrent file could be inside the enclosure tag
+        enclosure = item.xpath('enclosure')
+        return enclosure.xpath('@url').text if enclosure
+        item.xpath('link').text
     end
 
     def find_newer_episode(title, link, name)
