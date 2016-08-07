@@ -30,8 +30,13 @@ class PrettyFormatMovieName
 
     def self.extract_year(str)
         str.match(/.([0-9]{4})./) do |m|
-            str.gsub!(/.[0-9]{4}./, '.')
-            return m[1]
+            # number less than 1963 isn't considered a valid year
+            # this avoids to consider 0304 an year
+            # 1963 is the year of the first 'Doctor Who' TV serie
+            if m[1] > '1963'
+                str.gsub!(/.[0-9]{4}./, '.')
+                return m[1]
+            end
         end
         ''
     end
