@@ -74,7 +74,7 @@ class TorrentDownloader
     def link_from_rss_node(item)
         # the direct link to the .torrent file could be inside the enclosure tag
         enclosure = item.xpath('enclosure')
-        return enclosure.xpath('@url').text if enclosure
+        return enclosure.xpath('@url').text unless enclosure.empty?
         item.xpath('link').text
     end
 
