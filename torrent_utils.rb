@@ -31,6 +31,27 @@ class TorrentUtils
         feed_url
     end
 
+    def setup_feeds
+        # create the fake rss file
+        fake_feed_path = File.join(Dir.tmpdir, 'torlock.xml')
+        script_dir = File.dirname(File.expand_path($PROGRAM_NAME))
+        torlock_to_feed(File.join(script_dir, 'feed-template.xml'), fake_feed_path)
+    end
+
+    def torlock_to_feed(feed_template_path, rss_output_path)
+        base_url = 'https://torlock.unlockproject.com'
+        url = "#{base_url}/television.html"
+        arr = Nokogiri::HTML(open(url, allow_redirections: :safe)).css('.tv3 + a').map do |item|
+            tor_id = item.attr('href').match(%r{/(\d+)/})[1]
+            url = "#{base_url}/tor/#{tor_id}.torrent"
+            "<item><title>#{item.text}</title><link>#{url}</link></item>"
+        end
+
+        template = open(feed_template_path).read
+        template.gsub!('%items%', arr.join("\n"))
+        open(rss_output_path, 'wb') { |f| f << template }
+    end
+
     private
 
     # Find the torrent_id, it could be the destination page

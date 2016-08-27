@@ -116,4 +116,5 @@ class TorrentDownloader
 end
 
 TorrentUtils.instance.load_search_engines(options.searchEngineConfigPath)
+TorrentUtils.instance.setup_feeds
 TorrentDownloader.new(options).fetch
