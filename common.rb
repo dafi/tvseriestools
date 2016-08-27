@@ -2,6 +2,7 @@ require 'zip'
 require 'optparse'
 require 'ostruct'
 require 'json'
+require 'tmpdir'
 require_relative './pretty_format_movie_name'
 
 # Common methods used to
@@ -75,6 +76,7 @@ class Common
         options = OpenStruct.new(json_map)
         # resolve path
         options.outputPath = Common.get_output_path(script_dir, json_map)
+        options.aggregators = Common.expand_aggregators(options.aggregators) if options.aggregators
 
         options
     end
@@ -90,5 +92,13 @@ class Common
             end
         end
         list
+    end
+
+    def self.expand_aggregators(aggregators)
+        tmpdir = Dir.tmpdir
+        # Aggregators starting with '--' are considered commented out
+        aggregators
+            .reject { |x| x.start_with?('--') }
+            .map { |x| x.gsub('$TMP_DIR', tmpdir) }
     end
 end
