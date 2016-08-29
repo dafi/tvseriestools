@@ -20,9 +20,11 @@ end
 def unzip_and_prettify(zip_path, dest_path, delete_zip)
     on_exists = Zip.on_exists_proc
     Zip.on_exists_proc = true
+    contains_subs = false
 
     Zip::File.open(zip_path) do |zip_file|
         zip_entries = zip_file.glob('*.srt')
+        contains_subs = zip_entries.count > 0
 
         if zip_entries.count == 1
             Common.rename_prettified(dest_path, zip_entries.first.name)
@@ -32,7 +34,7 @@ def unzip_and_prettify(zip_path, dest_path, delete_zip)
     end
     Zip.on_exists_proc = on_exists
 
-    File.delete(zip_path) if delete_zip
+    File.delete(zip_path) if delete_zip && contains_subs
 end
 
 # Test to see if the file_name is already prettified
