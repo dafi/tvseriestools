@@ -27,7 +27,7 @@ def unzip_and_prettify(zip_path, dest_path, delete_zip)
         contains_subs = zip_entries.count > 0
 
         if zip_entries.count == 1
-            Common.rename_prettified(dest_path, zip_entries.first.name)
+            rename_zip_entry(dest_path, zip_entries.first)
         elsif zip_entries.count > 1
             create_unzipped_directory(zip_path, dest_path, zip_entries)
         end
@@ -35,6 +35,11 @@ def unzip_and_prettify(zip_path, dest_path, delete_zip)
     Zip.on_exists_proc = on_exists
 
     File.delete(zip_path) if delete_zip && contains_subs
+end
+
+def rename_zip_entry(dest_path, entry)
+    parsed = PrettyFormatMovieName.parse(entry.name)
+    entry.extract(File.join(dest_path, parsed.format)) if parsed
 end
 
 # Test to see if the file_name is already prettified
