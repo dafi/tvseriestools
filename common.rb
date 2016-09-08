@@ -83,15 +83,12 @@ class Common
     # rubocop:enable Metrics/LineLength
 
     def self.get_tvseries_from_folders(series_folders, excluded_folders)
-        list = []
-
-        series_folders.each do |dir|
+        series_folders.each_with_object([]) do |dir, list|
             Dir.foreach(dir) do |name|
                 next if name == '.' || name == '..' || File.file?(name) || excluded_folders.include?(name)
                 list.push(name.downcase)
             end
         end
-        list
     end
 
     def self.expand_aggregators(aggregators)

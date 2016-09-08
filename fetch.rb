@@ -44,7 +44,11 @@ class TorrentDownloader
         tvseries_list.each_with_index do |name, index|
             print "#{@blank_line}\r"
             print "#{index + 1}/#{tvseries_list.length} #{name}\r"
-            episodes.concat(get_url(get_aggregator_url(template_url, name), name))
+            begin
+                episodes.concat(get_url(get_aggregator_url(template_url, name), name))
+            rescue StandardError => e
+                puts "Found error #{e}"
+            end
         end
         puts
     end
@@ -80,28 +84,33 @@ class TorrentDownloader
 
     def find_newer_episode(title, link, name)
         movie = PrettyFormatMovieName.parse(title)
-        if movie && movie.showName == name
-            index = @options.searchPaths.index do |search_path|
-                path = search_path.gsub('%1', movie.showName)
-                Common.episode_exist?(path, movie, @options.excludeExts)
-            end
-            return { 'movie' => movie, 'link' => link } if index.nil?
+        is_newer = movie && movie.showName == name && !episode_exist?(movie)
+        { 'movie' => movie, 'link' => link } if is_newer
+    end
+
+    def episode_exist?(movie)
+        @options.searchPaths.any? do |search_path|
+            path = search_path.gsub('%1', movie.showName)
+            Common.episode_exist?(path, movie, @options.excludeExts)
         end
     end
 
     # The feed page can contain more links for the same episode
     # so check if the episodes list already contains it
     def contain_episode?(episodes, new_episode)
-        !episodes.index do |ep|
-            ep['movie'].same_episode?(new_episode)
-        end.nil?
+        episodes.any? { |ep| ep['movie'].same_episode?(new_episode) }
     end
 
     def download_all(episodes)
         episodes.each do |title|
             pretty_name = title['movie'].format
+            url = title['link']
             print "Downloading #{pretty_name}..."
-            download_torrent(title['link'], pretty_name)
+            if TorrentUtils.instance.magnet_url?(url)
+                `#{@options.magnetScript} #{url}`
+            else
+                download_torrent(url, pretty_name)
+            end
             puts ' done'
         end
     end
@@ -116,5 +125,4 @@ class TorrentDownloader
 end
 
 TorrentUtils.instance.load_search_engines(options.searchEngineConfigPath)
-TorrentUtils.instance.setup_feeds
 TorrentDownloader.new(options).fetch
