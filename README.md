@@ -17,9 +17,11 @@ See [pretty-format-movie-filename](https://github.com/dafi/pretty-format-movie-f
 	sudo apt-get install ruby-dev
 
 
-	gem install nokogiri
+	gem install nokogiri (*)
 	gem install rubyzip
 	gem install open_uri_redirections
+
+(*) nokogiri can fail to install if `xv` is installed, see [more](https://github.com/sparklemotion/nokogiri/issues/1483)
 
 ### Raspberry and Transmission daemon
 
