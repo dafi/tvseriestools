@@ -16,7 +16,10 @@ class TorrentUtils
     end
 
     def get_torrent_url_from_feed(feed_url)
-        html = open(feed_url, allow_redirections: :safe).read.gsub(/(\n|\r|\t)/, '')
+        html = open(feed_url, allow_redirections: :safe)
+               .read
+               .encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
+               .gsub(/(\n|\r|\t)/, '')
 
         @engine_list.each do |engine|
             torrent_id = find_torrent_id(engine, html)
