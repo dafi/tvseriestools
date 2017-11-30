@@ -12,7 +12,7 @@ options = Common.parse_command_line('feeds.json')
 
 # files ending with these extensions will be not considered movies
 # and will not be used to check if movies must be downloaded
-options.excludeExts = ['.zip', '.srt']
+options.excludeExts = ['.zip', '.srt', '.unzipped']
 
 # Download .torrent files for missing episodes
 class TorrentDownloader
@@ -58,6 +58,38 @@ class TorrentDownloader
     end
 
     def get_url(url, name)
+        if url.start_with?('webpage:')
+            get_url_html(url[8..-1], name)
+        else
+            get_url_rss(url, name)
+        end
+    end
+
+    def get_url_html(url, name)
+        episodes = []
+
+        Nokogiri::HTML(open(url, allow_redirections: :safe)).xpath('//a').each do |item|
+            link = absolute_url(url, item['href'])
+            title = item.text
+
+            next unless link
+            # skip 720p and 1080p files
+            next if title =~ /\b(480p|720p|1080p)\b/
+
+            new_ep = find_newer_episode(title, link, name)
+            next if !new_ep || contain_episode?(episodes, new_ep['movie'])
+            episodes.push(new_ep)
+        end
+        episodes
+    end
+
+    def absolute_url(url, path)
+        return path unless path.start_with?('/')
+        uri = URI(url)
+        URI.join("#{uri.scheme}://#{uri.host}", path).to_s
+    end
+
+    def get_url_rss(url, name)
         episodes = []
 
         Nokogiri::XML(open(url, allow_redirections: :safe)).xpath('//item').each do |item|
@@ -106,20 +138,20 @@ class TorrentDownloader
             pretty_name = title['movie'].format
             url = title['link']
             print "Downloading #{pretty_name}..."
-            if TorrentUtils.instance.magnet_url?(url)
-                `#{@options.magnetScript} #{url}`
-            else
-                download_torrent(url, pretty_name)
-            end
+            download_torrent(url, pretty_name)
             puts ' done'
         end
     end
 
     def download_torrent(url, label)
         torrent_url = TorrentUtils.instance.get_torrent_url_from_feed(url)
-        full_dest_path = File.join(@torrents_path, label + '.torrent')
-        open(full_dest_path, 'wb') do |file|
-            file << open(torrent_url, allow_redirections: :safe).read
+        if TorrentUtils.instance.magnet_url?(torrent_url)
+            `#{@options.magnetScript} #{torrent_url}`
+        else
+            full_dest_path = File.join(@torrents_path, label + '.torrent')
+            open(full_dest_path, 'wb') do |file|
+                file << open(torrent_url, allow_redirections: :safe).read
+            end
         end
     end
 end
