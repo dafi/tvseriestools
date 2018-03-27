@@ -76,6 +76,7 @@ class PrettyFormatMovieName
         s = sprintf('%s.s%02de%02d', @showName, @season, @episode)
         s << '.' + @extraText unless !full || extraText.nil? || @extraText.empty?
         s << '.' + @ext unless @ext.nil? || @ext.empty?
+        s
     end
 
     def ==(other)

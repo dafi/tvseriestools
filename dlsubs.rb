@@ -20,36 +20,30 @@ class SubsDownloader
     def download
         @tvseries_list = Common.get_tvseries_from_folders(
             @options.seriesFolders,
-            @options.excludedFolders)
+            @options.excludedFolders
+        )
         @options.feeds.each { |s| send(s['titleParser'], s['feedUrl']) }
     end
 
-    def subspedia_downloader(url, title)
-        movie_name = subspedia_movie_from_title(title)
+    def subspedia_downloader(item)
+        movie_name = subspedia_movie_from_title(item)
         return if movie_name.nil? || episode_exist?(movie_name)
 
-        html_page = open(url).read
-        subs_url = 'http://www.subspedia.tv/' + html_page.match(/onClick=.downloadSub\('(.*?)'/)[1]
-        download_missing_tv_series_subs(subs_url, movie_name)
+        download_missing_tv_series_subs(item['link_file'], movie_name, 'zip')
     end
 
     def subspedia(url)
-        Nokogiri::XML(open(url)).xpath('//channel/item').each do |item|
-            # expand the & character to the string 'and'
-            title = item.xpath('title').text.sub(/&/, 'and')
-            url = item.xpath('link').text
-            subspedia_downloader(url, title)
+        JSON.parse(open(url).read).each do |item|
+            subspedia_downloader(item)
         end
     end
 
-    def subspedia_movie_from_title(title)
-        m = title.tr(' ', '.').match(/(.*?)\((\d+)x(\d+)\)/)
-        file_name = m[1]
-        season = format('%02d', m[2])
-        episode = format('%02d', m[3])
-
-        file_name = file_name + 'S' + season + 'E' + episode + '.srt'
-        PrettyFormatMovieName.parse(file_name)
+    def subspedia_movie_from_title(item)
+        title = PrettyFormatMovieName.new
+        title.showName = item['nome_serie'].gsub(/[ _-]/, '.').downcase
+        title.season = item['num_stagione']
+        title.episode = item['num_episodio']
+        title
     end
 
     def subsfactory(url)
